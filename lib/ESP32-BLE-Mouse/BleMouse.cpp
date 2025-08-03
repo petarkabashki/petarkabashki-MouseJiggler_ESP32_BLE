@@ -150,7 +150,11 @@ void BleMouse::taskServer(void* pvParameter) {
 
   bleMouseInstance->hid->manufacturer()->setValue(bleMouseInstance->deviceManufacturer);
 
-  bleMouseInstance->hid->pnp(0x02, 0xe502, 0xa111, 0x0210);
+  // bleMouseInstance->hid->pnp(0x02, 0xe502, 0xa111, 0x0210);
+  // BleMouse bleMouse("MX Master 3", "Logitech, Inc.", 100);
+  // Vendor ID source = USB (0x02), Vendor = 0x046D, Product = 0xB023, Version = 0x0100
+  bleMouseInstance->hid->pnp(0x02, 0x046D, 0xB023, 0x0100);
+
   bleMouseInstance->hid->hidInfo(0x00,0x02);
 
   BLESecurity *pSecurity = new BLESecurity();
@@ -165,6 +169,17 @@ void BleMouse::taskServer(void* pvParameter) {
   BLEAdvertising *pAdvertising = pServer->getAdvertising();
   pAdvertising->setAppearance(HID_MOUSE);
   pAdvertising->addServiceUUID(bleMouseInstance->hid->hidService()->getUUID());
+  
+  // Little-endian: 0x6D,0x04 = 0x046D (Logitech), then 0x23,0xB0 = 0xB023 (MX Master 3)
+  std::string mfr = "";
+  mfr.push_back(0x6D);
+  mfr.push_back(0x04);
+  mfr.push_back(0x23);
+  mfr.push_back(0xB0);
+  BLEAdvertisementData advertisementData;
+  advertisementData.setManufacturerData(mfr);
+  pAdvertising->setAdvertisementData(advertisementData);
+
   pAdvertising->start();
   bleMouseInstance->hid->setBatteryLevel(bleMouseInstance->batteryLevel);
 

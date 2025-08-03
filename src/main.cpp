@@ -4,8 +4,8 @@
 #include <Preferences.h> // Library for saving state to memory
 
 // --- Main Configuration ---
-#define BUTTON_PIN 9
-#define LED_PIN 8             // Using the now-confirmed working pin
+#define BUTTON_PIN 0  // GPIO0 is commonly available and safe for button input on ESP32-WROOM
+#define LED_PIN 2  // GPIO2 is the onboard LED on most ESP32-WROOM modules
 #define DOUBLE_CLICK_TIME 500 // Time in ms to detect a double/triple click
 
 // --- Jiggle Parameters (Customize these values) ---
@@ -18,7 +18,9 @@
 #define ZIGZAG_PHASE_LENGTH 30 // How many steps before changing drift direction
 
 // --- BLE Mouse Setup ---
-BleMouse bleMouse("Wireless Jiggler", "ACME Corp", 100);
+BleMouse bleMouse("MX Master 3", "Logitech, Inc.", 100);
+
+// BleMouse bleMouse("Wireless Jiggler", "ACME Corp", 100);
 Preferences preferences; // Object to handle saving data
 
 // --- Jiggle Modes ---
