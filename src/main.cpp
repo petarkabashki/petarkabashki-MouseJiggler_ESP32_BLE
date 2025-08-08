@@ -4,8 +4,16 @@
 #include <Preferences.h> // Library for saving state to memory
 
 // --- Main Configuration ---
-#define BUTTON_PIN 0  // GPIO0 is commonly available and safe for button input on ESP32-WROOM
-#define LED_PIN 2  // GPIO2 is the onboard LED on most ESP32-WROOM modules
+// Esp32 wroom
+// #define BUTTON_PIN 0  // GPIO0 is commonly available and safe for button input on ESP32-WROOM
+// #define LED_PIN 2  // GPIO2 is the onboard LED on most ESP32-WROOM modules
+
+// Esp32-C3 SuperMini
+// --- Main Configuration ---
+// Update the button and LED pins as per your ESP32-C3 SuperMini schematic
+#define BUTTON_PIN 9
+#define LED_PIN 8 
+
 #define DOUBLE_CLICK_TIME 500 // Time in ms to detect a double/triple click
 
 // --- Jiggle Parameters (Customize these values) ---
