@@ -3,6 +3,12 @@
 #include <esp_task_wdt.h>
 #include <Preferences.h> // Library for saving state to memory
 
+#ifdef HAS_OLED
+#include <U8g2lib.h>
+// ESP32-C3 0.42" OLED "egg" board: SSD1306-compatible 72x40 panel on I2C (SDA=5, SCL=6)
+U8G2_SSD1306_72X40_ER_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, /* SCL */ 6, /* SDA */ 5);
+#endif
+
 // --- Main Configuration ---
 // Esp32 wroom
 // #define BUTTON_PIN 0  // GPIO0 is commonly available and safe for button input on ESP32-WROOM
@@ -43,6 +49,11 @@ int buttonPressCount = 0;
 bool buttonLastState = HIGH;
 bool wasConnected = false;
 int zigzagStep = 0;
+#ifdef HAS_OLED
+JiggleMode lastOledMode = NONE;
+bool lastOledConnected = false;
+void updateOLED(bool connected); // defined below setup()
+#endif
 
 void setup() {
   Serial.begin(115200);
@@ -64,9 +75,47 @@ void setup() {
     Serial.println("Press the button to change modes.");
   }
 
+#ifdef HAS_OLED
+  u8g2.begin();
+  u8g2.setPowerSave(0);
+  u8g2.setContrast(255);
+  u8g2.setBusClock(400000);
+  updateOLED(false); // Force an initial draw — the loop() only redraws on change
+  lastOledMode = jiggleMode;
+  lastOledConnected = false;
+#endif
+
   esp_task_wdt_init(3, true);
   esp_task_wdt_add(NULL);
 }
+
+#ifdef HAS_OLED
+const char *modeName(JiggleMode mode) {
+  switch (mode) {
+    case SLOW:   return "SLOW";
+    case FAST:   return "FAST";
+    case ZIGZAG: return "ZIGZAG";
+    case NONE:
+    default:     return "OFF";
+  }
+}
+
+// 🖥️ Redraws the OLED with the current mode and BLE connection state
+void updateOLED(bool connected) {
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_6x10_tf);
+  u8g2.drawStr(0, 10, "BLE Jiggler");
+  u8g2.drawHLine(0, 13, 72);
+
+  u8g2.setFont(u8g2_font_7x14B_tf);
+  u8g2.drawStr(2, 30, modeName(jiggleMode));
+
+  u8g2.setFont(u8g2_font_6x10_tf);
+  u8g2.drawStr(0, 39, connected ? "Connected" : "No link");
+
+  u8g2.sendBuffer();
+}
+#endif
 
 // 💡 Manages the LED to show the current mode
 void updateLED() {
@@ -132,13 +181,6 @@ void handleButtonPress() {
   }
 }
 
-void tryReconnectBLE() {
-  bleMouse.end();
-  delay(500);
-  bleMouse.begin();
-  Serial.println("🔁 BLE service restarted");
-}
-
 void loop() {
   esp_task_wdt_reset();
   handleButtonPress();
@@ -146,14 +188,20 @@ void loop() {
 
   bool connected = bleMouse.isConnected();
 
+#ifdef HAS_OLED
+  if (jiggleMode != lastOledMode || connected != lastOledConnected) {
+    updateOLED(connected);
+    lastOledMode = jiggleMode;
+    lastOledConnected = connected;
+  }
+#endif
+
   if (connected && !wasConnected) {
     Serial.println("✅ BLE Connected");
     wasConnected = true;
   } else if (!connected && wasConnected) {
-    Serial.println("❌ BLE Disconnected — attempting recovery...");
+    Serial.println("❌ BLE Disconnected — advertising resumed");
     wasConnected = false;
-    tryReconnectBLE();
-    return;
   }
   
   if (connected && millis() - lastKeepAliveTime > 30000) {

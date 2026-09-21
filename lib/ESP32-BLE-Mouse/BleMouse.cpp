@@ -160,6 +160,13 @@ void BleMouse::taskServer(void* pvParameter) {
   BLESecurity *pSecurity = new BLESecurity();
 
   pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
+  // Without these, no LTK/IRK is actually exchanged during bonding, so
+  // BlueZ later fails to read the encrypted HID characteristics with
+  // "Request attribute has encountered an unlikely error" even though
+  // the pairing itself appeared to succeed.
+  pSecurity->setCapability(ESP_IO_CAP_NONE);
+  pSecurity->setInitEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
+  pSecurity->setRespEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
 
   bleMouseInstance->hid->reportMap((uint8_t*)_hidReportDescriptor, sizeof(_hidReportDescriptor));
   bleMouseInstance->hid->startServices();

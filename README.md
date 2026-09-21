@@ -22,10 +22,24 @@ A simple, feature-rich Mouse Jiggler using an ESP32-C3 SuperMini and BLE to keep
 
 ## 🛠️ Hardware Requirements
 
-- ESP32-C3 SuperMini board
+- ESP32-C3 SuperMini board **or** an ESP32-C3 "egg" board with a built-in 0.42" OLED
 - USB Type-C Data Cable
 - PC/Laptop with Bluetooth
 - Optional: Breadboard/Case for enclosure
+
+### 🥚 0.42" OLED "egg" board
+
+Cheap ESP32-C3 boards with a tiny built-in 0.42" SSD1306-compatible OLED (72x40px)
+are also supported, using the `esp32-c3-042oled` PlatformIO environment:
+
+```
+pio run -e esp32-c3-042oled -t upload
+```
+
+Pinout used on these boards: OLED SDA=GPIO5, SCL=GPIO6, onboard LED=GPIO8,
+BOOT button=GPIO9 (same button/LED pins as the SuperMini, so no code changes
+are needed beyond selecting this environment). The screen shows the current
+jiggle mode and BLE connection status, and updates whenever either changes.
 
 ## 📦 Setup Instructions (PlatformIO)
 
