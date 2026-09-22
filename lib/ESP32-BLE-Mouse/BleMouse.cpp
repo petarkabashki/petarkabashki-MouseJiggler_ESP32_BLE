@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEServer.h>
@@ -19,10 +20,14 @@
   static const char* LOG_TAG = "BLEDevice";
 #endif
 
+#define REPORTID_MOUSE    1
+#define REPORTID_KEYBOARD 2
+
 static const uint8_t _hidReportDescriptor[] = {
   USAGE_PAGE(1),       0x01, // USAGE_PAGE (Generic Desktop)
   USAGE(1),            0x02, // USAGE (Mouse)
   COLLECTION(1),       0x01, // COLLECTION (Application)
+  REPORT_ID(1),        REPORTID_MOUSE,
   USAGE(1),            0x01, //   USAGE (Pointer)
   COLLECTION(1),       0x00, //   COLLECTION (Physical)
   // ------------------------------------------------- Buttons (Left, Right, Middle, Back, Forward)
@@ -57,13 +62,56 @@ static const uint8_t _hidReportDescriptor[] = {
   REPORT_COUNT(1),     0x01, //     REPORT_COUNT (1)
   HIDINPUT(1),         0x06, //     INPUT (Data, Var, Rel)
   END_COLLECTION(0),         //   END_COLLECTION
+  END_COLLECTION(0),         // END_COLLECTION
+
+  // ----------------------------------------------------------- Keyboard
+  USAGE_PAGE(1),       0x01, // USAGE_PAGE (Generic Desktop)
+  USAGE(1),            0x06, // USAGE (Keyboard)
+  COLLECTION(1),       0x01, // COLLECTION (Application)
+  REPORT_ID(1),        REPORTID_KEYBOARD,
+  // ------------------------------------------------- Modifier byte
+  USAGE_PAGE(1),       0x07, //   USAGE_PAGE (Keyboard/Keypad)
+  USAGE_MINIMUM(1),    0xe0, //   USAGE_MINIMUM (Left Control)
+  USAGE_MAXIMUM(1),    0xe7, //   USAGE_MAXIMUM (Right GUI)
+  LOGICAL_MINIMUM(1),  0x00, //   LOGICAL_MINIMUM (0)
+  LOGICAL_MAXIMUM(1),  0x01, //   LOGICAL_MAXIMUM (1)
+  REPORT_SIZE(1),      0x01, //   REPORT_SIZE (1)
+  REPORT_COUNT(1),     0x08, //   REPORT_COUNT (8)
+  HIDINPUT(1),         0x02, //   INPUT (Data, Variable, Absolute)
+  // ------------------------------------------------- Reserved byte
+  REPORT_COUNT(1),     0x01, //   REPORT_COUNT (1)
+  REPORT_SIZE(1),      0x08, //   REPORT_SIZE (8)
+  HIDINPUT(1),         0x03, //   INPUT (Constant)
+  // ------------------------------------------------- LED output report
+  REPORT_COUNT(1),     0x05, //   REPORT_COUNT (5)
+  REPORT_SIZE(1),      0x01, //   REPORT_SIZE (1)
+  USAGE_PAGE(1),       0x08, //   USAGE_PAGE (LEDs)
+  USAGE_MINIMUM(1),    0x01, //   USAGE_MINIMUM (Num Lock)
+  USAGE_MAXIMUM(1),    0x05, //   USAGE_MAXIMUM (Kana)
+  HIDOUTPUT(1),        0x02, //   OUTPUT (Data, Variable, Absolute)
+  REPORT_COUNT(1),     0x01, //   REPORT_COUNT (1)
+  REPORT_SIZE(1),      0x03, //   REPORT_SIZE (3)
+  HIDOUTPUT(1),        0x03, //   OUTPUT (Constant) ; LED padding
+  // ------------------------------------------------- Six simultaneous keys
+  REPORT_COUNT(1),     0x06, //   REPORT_COUNT (6)
+  REPORT_SIZE(1),      0x08, //   REPORT_SIZE (8)
+  LOGICAL_MINIMUM(1),  0x00, //   LOGICAL_MINIMUM (0)
+  LOGICAL_MAXIMUM(1),  0x65, //   LOGICAL_MAXIMUM (101)
+  USAGE_PAGE(1),       0x07, //   USAGE_PAGE (Keyboard/Keypad)
+  USAGE_MINIMUM(1),    0x00, //   USAGE_MINIMUM (0)
+  USAGE_MAXIMUM(1),    0x65, //   USAGE_MAXIMUM (101)
+  HIDINPUT(1),         0x00, //   INPUT (Data, Array)
   END_COLLECTION(0)          // END_COLLECTION
 };
 
 BleMouse::BleMouse(std::string deviceName, std::string deviceManufacturer, uint8_t batteryLevel) : 
     _buttons(0),
-    hid(0)
+    _modifiers(0),
+    hid(0),
+    inputKeyboard(0),
+    server(0)
 {
+  memset(this->_keys, 0, sizeof(this->_keys));
   this->deviceName = deviceName;
   this->deviceManufacturer = deviceManufacturer;
   this->batteryLevel = batteryLevel;
@@ -128,6 +176,66 @@ bool BleMouse::isPressed(uint8_t b)
   return false;
 }
 
+// --------------------------------------------------------------------------
+// Keyboard
+// --------------------------------------------------------------------------
+void BleMouse::sendKeyReport(void)
+{
+  if (!this->isConnected() || this->inputKeyboard == nullptr) return;
+  uint8_t k[8];
+  k[0] = _modifiers;
+  k[1] = 0; // reserved
+  memcpy(&k[2], _keys, 6);
+  this->inputKeyboard->setValue(k, 8);
+  this->inputKeyboard->notify();
+}
+
+void BleMouse::keyPress(uint8_t usage, uint8_t modifiers)
+{
+  _modifiers |= modifiers;
+  if (usage) {
+    for (int i = 0; i < 6; i++) if (_keys[i] == usage) { sendKeyReport(); return; }
+    for (int i = 0; i < 6; i++) if (_keys[i] == 0) { _keys[i] = usage; break; }
+  }
+  sendKeyReport();
+}
+
+void BleMouse::keyRelease(uint8_t usage)
+{
+  for (int i = 0; i < 6; i++) if (_keys[i] == usage) _keys[i] = 0;
+  sendKeyReport();
+}
+
+void BleMouse::releaseAll(void)
+{
+  _modifiers = 0;
+  memset(_keys, 0, sizeof(_keys));
+  sendKeyReport();
+}
+
+void BleMouse::keyTap(uint8_t usage, uint8_t modifiers)
+{
+  keyPress(usage, modifiers);
+  delay(8); // hosts drop keystrokes that arrive as a single same-millisecond report pair
+  releaseAll();
+  delay(8);
+}
+
+void BleMouse::writeChar(char c)
+{
+  uint8_t idx = (uint8_t)c;
+  if (idx >= KEYMAP_SIZE) return;
+  KEYMAP km = keymap[idx];
+  if (km.usage == 0) return;
+  keyTap(km.usage, km.modifier);
+}
+
+void BleMouse::writeString(const char* text)
+{
+  if (!text) return;
+  while (*text) writeChar(*text++);
+}
+
 bool BleMouse::isConnected(void) {
   return this->connectionStatus->connected;
 }
@@ -143,9 +251,12 @@ void BleMouse::taskServer(void* pvParameter) {
   BLEDevice::init(bleMouseInstance->deviceName);
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(bleMouseInstance->connectionStatus);
+  bleMouseInstance->server = pServer;
 
   bleMouseInstance->hid = new BLEHIDDevice(pServer);
-  bleMouseInstance->inputMouse = bleMouseInstance->hid->inputReport(0); // <-- input REPORTID from report map
+  bleMouseInstance->inputMouse = bleMouseInstance->hid->inputReport(REPORTID_MOUSE);
+  bleMouseInstance->inputKeyboard = bleMouseInstance->hid->inputReport(REPORTID_KEYBOARD);
+  bleMouseInstance->hid->outputReport(REPORTID_KEYBOARD); // keyboard LED state, unused
   bleMouseInstance->connectionStatus->inputMouse = bleMouseInstance->inputMouse;
 
   bleMouseInstance->hid->manufacturer()->setValue(bleMouseInstance->deviceManufacturer);

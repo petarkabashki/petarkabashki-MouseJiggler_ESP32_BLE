@@ -1,0 +1,5 @@
+## IDF 6.x has no in-tree LittleFS, so it comes from the component registry.
+## Same on-flash format as the Arduino build's LittleFS, which means the image
+## `pio run -t uploadfs` produces is readable by either firmware.
+dependencies:
+  joltwallet/littlefs: "^1.16.4"
