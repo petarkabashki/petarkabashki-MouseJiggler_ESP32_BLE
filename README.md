@@ -401,43 +401,22 @@ The interpreter itself is [src/forth.cpp](src/forth.cpp) / [src/forth.h](src/for
 storage (no `malloc`), non-blocking line reader, and a `forthYield` hook wired
 to the watchdog so long scripts don't reset the board.
 
-### Building without Arduino (ESP-IDF)
+### A Forth-first sibling, without Arduino
 
 The interpreter does not depend on Arduino. Everything it needs from the
-platform is [src/port.h](src/port.h) — a console, a clock, a yield, and a handful of system
-calls — and each framework supplies its own side of it:
+platform is [src/port.h](src/port.h) — a console, a clock, a yield, a
+filesystem mount and a handful of system calls — and
+[src/port_arduino.cpp](src/port_arduino.cpp) is this build's side of it.
 
-| file | framework |
-|---|---|
-| [src/port_arduino.cpp](src/port_arduino.cpp) | Arduino-ESP32, the shipping build |
-| [src/port_idf.c](src/port_idf.c) | ESP-IDF 6.1, no Arduino core |
-| the test harness | desktop, for running the Forth suite on a PC |
+A second project, **`../MouseJiggler_Forth`**, supplies the other side: the
+same `forth.cpp`, `forth_ffi.cpp` and `forth_files.cpp` on bare ESP-IDF, with
+no Arduino core and no Arduino libraries. It fits in 777 KB of flash and 61 KB
+of RAM against this build's 1,488 KB and 90 KB, and has the BLE HID mouse and
+keyboard, the filesystem, `boot.fs` and the FFI — but **not** WiFi or the OLED,
+which is why this build is still the one to flash if you want either.
 
-[src/forth.cpp](src/forth.cpp) and [src/forth_ffi.cpp](src/forth_ffi.cpp) compile unchanged against all three.
-
-```bash
-pio run -e esp32-c3-idf      # Forth on bare IDF
-```
-
-`sdkconfig.defaults` and `partitions_huge.csv` configure that build; the
-Arduino environments ignore both. The entry point is [src/main_idf.cpp](src/main_idf.cpp).
-
-The two builds now share more than the interpreter. [src/forth_files.cpp](src/forth_files.cpp)
-implements `ls cat include edit append rm df save-to` over plain POSIX — both
-frameworks mount LittleFS through ESP-IDF's VFS, so one implementation serves
-both and `/boot.fs`, safe mode and `save-words` behave identically. The IDF
-build gets LittleFS from the component registry
-([src/idf_component.yml](src/idf_component.yml)); IDF 6.x has none in-tree.
-
-Still Arduino-only: the mouse HID on the IDF side is
-[src/ble_hid_idf.c](src/ble_hid_idf.c) and works, but WiFi, the OLED and the
-config words (`save` / `restore` / `defaults`) have not been moved yet.
-
-| build | flash | RAM |
-|---|---|---|
-| Arduino + BLE + WiFi + OLED + jiggler | 1,521 KB | 91 KB |
-| Arduino + BLE + WiFi + jiggler | 1,488 KB | 90 KB |
-| IDF: Forth + FFI + GPIO + BLE HID + LittleFS | 777 KB | 61 KB |
+That project is where the Forth-first work continues. This one stays the
+Arduino variant.
 
 ## 💡 Notes
 

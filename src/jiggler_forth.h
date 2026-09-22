@@ -1,6 +1,6 @@
-// The jiggler itself, written in Forth. Shared verbatim by both builds: the
-// Arduino one in main.cpp and the ESP-IDF one in main_idf.cpp evaluate this
-// before forthMarkCore(), so it counts as part of the core vocabulary.
+// The jiggler itself, written in Forth. main.cpp evaluates this before
+// forthMarkCore(), so it counts as part of the core vocabulary. The sibling
+// project ../MouseJiggler_Forth runs the same text verbatim.
 //
 // Everything it needs from the device is a handful of words — move, conn?,
 // mode@, millis, random and the timing variables — which is why the same text

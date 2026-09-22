@@ -9,7 +9,7 @@
 
 #include "forth.h"       // Embedded command language on the serial terminal
 #include "forth_ffi.h"   // Calling compiled code by address, from Forth
-#include "forth_files.h" // ls/cat/include/edit/…, shared with the IDF build
+#include "forth_files.h" // ls/cat/include/edit/… over POSIX
 
 #ifdef HAS_OLED
 #include <U8g2lib.h>
@@ -558,10 +558,10 @@ static void fw_wifiAp() { // ( -- ) access point using the stored credentials
 }
 
 // --- files ----------------------------------------------------------------
-// The file words live in forth_files.cpp, over POSIX, so the IDF build gets
-// exactly the same `ls cat include edit append rm df save-to` without a second
-// implementation. LittleFS mounts a VFS at /littlefs and that is all this
-// build has to contribute; the mount itself is in port_arduino.cpp.
+// The file words live in forth_files.cpp, over POSIX: LittleFS mounts a VFS
+// at /littlefs and that is all this build has to contribute, the mount itself
+// being in port_arduino.cpp. Writing them this way is what lets the sibling
+// project run `ls cat include edit append rm df save-to` unchanged.
 
 // --- persistence of Forth definitions -------------------------------------
 static void fw_saveWords() {

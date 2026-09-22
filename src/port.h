@@ -3,9 +3,11 @@
 // forth.cpp and forth_ffi.cpp include this and nothing else — no Arduino.h, no
 // esp_*.h. Each backend supplies the other side:
 //
-//   port_arduino.cpp   Arduino-ESP32 (the shipping build)
-//   port_idf.c         ESP-IDF, no Arduino  (framework = espidf)
+//   port_arduino.cpp   Arduino-ESP32 — this build
 //   port_host.cpp      the desktop test harness
+//
+// A bare ESP-IDF backend lives in the sibling project ../MouseJiggler_Forth;
+// this header is the contract both sides are written against.
 //
 // Everything here is either something the interpreter itself needs or a service
 // with no portable equivalent. Device functions — the mouse, the screen, WiFi —
