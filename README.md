@@ -408,12 +408,13 @@ platform is [src/port.h](src/port.h) — a console, a clock, a yield, a
 filesystem mount and a handful of system calls — and
 [src/port_arduino.cpp](src/port_arduino.cpp) is this build's side of it.
 
-A second project, **`../MouseJiggler_Forth`**, supplies the other side: the
-same `forth.cpp`, `forth_ffi.cpp` and `forth_files.cpp` on bare ESP-IDF, with
-no Arduino core and no Arduino libraries. It fits in 777 KB of flash and 61 KB
-of RAM against this build's 1,488 KB and 90 KB, and has the BLE HID mouse and
-keyboard, the filesystem, `boot.fs` and the FFI — but **not** WiFi or the OLED,
-which is why this build is still the one to flash if you want either.
+A second project, **`../forthkit`**, supplies the other side: the same
+`forth.cpp`, `forth_ffi.cpp` and `forth_files.cpp` on bare ESP-IDF, with no
+Arduino core and no Arduino libraries. There the Forth system is the kernel and
+the jiggler is one application under `apps/`; it fits in 777 KB of flash and
+61 KB of RAM against this build's 1,488 KB and 90 KB, and has the BLE HID mouse
+and keyboard, the filesystem, `boot.fs` and the FFI — but **not** WiFi or the
+OLED, which is why this build is still the one to flash if you want either.
 
 That project is where the Forth-first work continues. This one stays the
 Arduino variant.

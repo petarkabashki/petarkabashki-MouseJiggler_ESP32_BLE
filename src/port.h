@@ -6,7 +6,7 @@
 //   port_arduino.cpp   Arduino-ESP32 — this build
 //   port_host.cpp      the desktop test harness
 //
-// A bare ESP-IDF backend lives in the sibling project ../MouseJiggler_Forth;
+// A bare ESP-IDF backend lives in the sibling project ../forthkit;
 // this header is the contract both sides are written against.
 //
 // Everything here is either something the interpreter itself needs or a service
