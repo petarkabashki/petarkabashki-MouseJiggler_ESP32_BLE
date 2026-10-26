@@ -12,7 +12,7 @@ class BleConnectionStatus : public BLEServerCallbacks
 public:
   BleConnectionStatus(void);
   bool connected = false;
-  void onConnect(BLEServer* pServer);
+  void onConnect(BLEServer* pServer, esp_ble_gatts_cb_param_t* param);
   void onDisconnect(BLEServer* pServer);
   BLECharacteristic* inputMouse;
 };
