@@ -18,4 +18,4 @@
 \ : tick  jiggler-tick  keepalive ;
 
 \ Start in FAST mode every time.
-\ fast mode!
+fast mode!
