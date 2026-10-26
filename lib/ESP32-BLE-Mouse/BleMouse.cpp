@@ -264,7 +264,11 @@ void BleMouse::taskServer(void* pvParameter) {
   // bleMouseInstance->hid->pnp(0x02, 0xe502, 0xa111, 0x0210);
   // BleMouse bleMouse("MX Master 3", "Logitech, Inc.", 100);
   // Vendor ID source = USB (0x02), Vendor = 0x046D, Product = 0xB023, Version = 0x0100
-  bleMouseInstance->hid->pnp(0x02, 0x046D, 0xB023, 0x0100);
+  // Written directly: BLEHIDDevice::pnp() stores the IDs big-endian, but the
+  // PnP ID characteristic is little-endian, so hosts saw 6D04:23B0.
+  uint8_t pnpId[] = { 0x02, 0x6D, 0x04, 0x23, 0xB0, 0x00, 0x01 };
+  bleMouseInstance->hid->deviceInfo()
+      ->getCharacteristic(BLEUUID((uint16_t)0x2a50))->setValue(pnpId, sizeof(pnpId));
 
   bleMouseInstance->hid->hidInfo(0x00,0x02);
 
@@ -294,7 +298,13 @@ void BleMouse::taskServer(void* pvParameter) {
   mfr.push_back(0x04);
   mfr.push_back(0x23);
   mfr.push_back(0xB0);
+  // setAdvertisementData() replaces the whole payload, so the flags, appearance
+  // and HID UUID set above must be repeated here. Without the discoverable
+  // flag, desktop Bluetooth managers hide the device; only raw scans see it.
   BLEAdvertisementData advertisementData;
+  advertisementData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
+  advertisementData.setAppearance(HID_MOUSE);
+  advertisementData.setCompleteServices(bleMouseInstance->hid->hidService()->getUUID());
   advertisementData.setManufacturerData(mfr);
   pAdvertising->setAdvertisementData(advertisementData);
 
